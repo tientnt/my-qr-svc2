@@ -1,0 +1,32 @@
+﻿<#@ template language="C#" debug="False" hostspecific="True"  #>
+<#@ output extension=".java" #>
+<#@ include file="db_fasttrack.ttinclude" #>
+<#@ include file="JavaMySQL.ttinclude" #>
+<#
+    //general Settings.ttinclude  
+	
+	var entityNamespace = Namespace.Replace(".gen", "");
+    var tables = LoadTables();
+    foreach(Table tbl in tables) {
+		if (includeTables.Length>0 && !includeTables.Contains(tbl.Name.ToLower()))
+			continue;
+#>
+package <#=entityNamespace#>;
+
+import javax.persistence.*;
+
+import <#=Namespace#>.<#=Prefix + tbl.TitleName#>Gen;
+
+/**
+ * A class which represents the <#=tbl.Name#> table in the <#=DatabaseName#> Database.
+ */
+@Entity
+@Table(name = "<#=tbl.Name.ToLower()#>")
+public class <#=Prefix + tbl.TitleName#> extends <#=Prefix + tbl.TitleName#>Gen {
+
+}
+<#
+    // Write new POCO class to its own file
+    SaveOutput(Prefix + tbl.TitleName + ".java", destinationFolder);
+}
+#>

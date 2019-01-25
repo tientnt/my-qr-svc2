@@ -1,0 +1,158 @@
+﻿<#@ template language="C#" debug="False" hostspecific="True"  #>
+<#@ output extension=".java" #>
+<#@ include file="db_dooraccess.ttinclude" #>
+<#@ include file="JavaMySQL.ttinclude" #>
+<#
+    //general Settings.ttinclude  
+	// Flush generation
+    this.GenerationEnvironment.Remove(0, this.GenerationEnvironment.Length);
+
+    var tables = LoadTables();
+    foreach(Table tbl in tables) {
+		if (includeTables.Length>0 && !includeTables.Contains(tbl.Name.ToLower()))
+			continue;
+#>
+package <#=Namespace#>;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import javax.persistence.*;
+import java.util.*;
+
+import static javax.persistence.GenerationType.IDENTITY;
+
+/**
+ * A class which represents the <#=tbl.Name#> table in the <#=DatabaseName#> database.
+ */
+@javax.persistence.Entity
+@Table(name = "<#=tbl.Name#>")
+public class <#=Prefix + tbl.TitleName#> {
+
+	public <#=Prefix + tbl.TitleName#>() {
+	}
+
+<#  
+		//generate fields
+		foreach(var col in tbl.Columns)
+		{
+			//ignore columns
+			if (GetIgnoreColumns(tbl.Name.ToLower()).Length>0 && GetIgnoreColumns(tbl.Name.ToLower()).Contains(col.Name.ToLower()))
+					continue;
+			if (col.IsPK) 
+			{
+#>
+    @Id
+	@GeneratedValue(strategy = IDENTITY)
+<#
+			}
+			if (!String.IsNullOrEmpty(col.columnAnnotation))
+			{
+#>
+    @Column(<#=col.columnAnnotation#>)
+<#
+			}
+			if (col.TitleName == "CreatedAt")
+			{
+#>
+    @CreationTimestamp
+<#
+			}
+			if (col.TitleName == "UpdatedAt")
+			{
+#>
+    @UpdateTimestamp
+<#
+			}
+			if (col.CamelName.IndexOf("is") == 0 || col.CamelName.IndexOf("has") == 0) {
+				if (col.SysType == "Integer") {
+					col.SysType = "Boolean";
+				}
+			}
+#>
+	private <#=col.SysType#> <#=col.CamelName#>;
+    public static final String <#=col.TitleName#>Column = "<#=col.CleanName#>";
+    public <#=col.SysType#> get<#=col.TitleName#>() {
+        return <#=col.CamelName#>;
+    }
+    public void set<#=col.TitleName#>(<#=col.SysType#> <#=col.CamelName#>) {
+        this.<#=col.CamelName#> = <#=col.CamelName#>;
+    }
+
+<#
+			if (col.IsForeignKey) 
+			{
+#>
+	//ManyToOne
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "<#=col.Name#>", insertable = false, updatable = false)
+	private <#=TitleCase(col.ForeignTable.OtherTable)#> <#=CamelCase(col.ForeignTable.OtherTable)#>;	
+    public <#=TitleCase(col.ForeignTable.OtherTable)#> get<#=TitleCase(col.ForeignTable.OtherTable)#>() {
+        return <#=CamelCase(col.ForeignTable.OtherTable)#>;
+    }
+    public void set<#=TitleCase(col.ForeignTable.OtherTable)#>(<#=TitleCase(col.ForeignTable.OtherTable)#> <#=CamelCase(col.ForeignTable.OtherTable)#>) {
+        this.<#=CamelCase(col.ForeignTable.OtherTable)#> = <#=CamelCase(col.ForeignTable.OtherTable)#>;
+    }
+
+<#
+			}//end if
+		}//end for columns
+#>
+	//OneToMany relationship
+<#
+		foreach(var childTable in tbl.ChildTables)
+		{
+#>
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "<#=tbl.CamelName#>")
+	private Set<<#=childTable.TitleName#>> <#=Inflector.MakePlural(childTable.CamelName)#> = new HashSet<>();	
+	public Set<<#=childTable.TitleName#>> get<#=Inflector.MakePlural(childTable.TitleName)#>() {
+		return <#=Inflector.MakePlural(childTable.CamelName)#>;
+	}
+	public void set<#=Inflector.MakePlural(childTable.TitleName)#>(Set<<#=childTable.TitleName#>> <#=Inflector.MakePlural(childTable.CamelName)#>) {
+		this.<#=Inflector.MakePlural(childTable.CamelName)#> = <#=Inflector.MakePlural(childTable.CamelName)#>;
+	}
+
+<#
+		}//end for
+#>
+	//ManyToMany relationship
+<#
+		foreach(var manyToMany in tbl.ManyToManys)
+		{
+			if (manyToMany.MappedBy == null)
+			{
+#>
+	@ManyToMany(fetch = FetchType.LAZY)
+	@JoinTable(name = "<#=manyToMany.JoinTable#>",
+		joinColumns = @JoinColumn(name = "<#=manyToMany.JoinColumn#>", nullable = false, updatable = false),
+		inverseJoinColumns = @JoinColumn(name = "<#=manyToMany.InverseJoinColumn#>", nullable = false, updatable = false))
+	private Set<<#=TitleCase(manyToMany.Entity)#>> <#=Inflector.MakePlural(CamelCase(manyToMany.Entity))#> = new HashSet<>(); 
+	public Set<<#=TitleCase(manyToMany.Entity)#>> get<#=Inflector.MakePlural(TitleCase(manyToMany.Entity))#>() {
+		return <#=Inflector.MakePlural(CamelCase(manyToMany.Entity))#>;
+	}
+	public void set<#=Inflector.MakePlural(TitleCase(manyToMany.Entity))#>(Set<<#=TitleCase(manyToMany.Entity)#>> <#=Inflector.MakePlural(CamelCase(manyToMany.Entity))#>) {
+		this.<#=Inflector.MakePlural(CamelCase(manyToMany.Entity))#> = <#=Inflector.MakePlural(CamelCase(manyToMany.Entity))#>;
+	}
+
+<#
+			} else {
+#>
+	@ManyToMany(mappedBy = "<#=manyToMany.MappedBy#>")
+	private Set<<#=TitleCase(manyToMany.Entity)#>> <#=Inflector.MakePlural(CamelCase(manyToMany.Entity))#> = new HashSet<>(); 
+	public Set<<#=TitleCase(manyToMany.Entity)#>> get<#=Inflector.MakePlural(TitleCase(manyToMany.Entity))#>() {
+		return <#=Inflector.MakePlural(CamelCase(manyToMany.Entity))#>;
+	}
+	public void set<#=Inflector.MakePlural(TitleCase(manyToMany.Entity))#>(Set<<#=TitleCase(manyToMany.Entity)#>> <#=Inflector.MakePlural(CamelCase(manyToMany.Entity))#>) {
+		this.<#=Inflector.MakePlural(CamelCase(manyToMany.Entity))#> = <#=Inflector.MakePlural(CamelCase(manyToMany.Entity))#>;
+	}
+
+<#
+			}
+		}
+#>
+}
+<#
+		//Write new POCO class to its own file
+		SaveOutput(Prefix + tbl.TitleName + ".java", destinationFolder);
+	}//end for table
+#>

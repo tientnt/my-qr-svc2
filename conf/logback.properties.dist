@@ -1,0 +1,13 @@
+#copy this file to same folder as .jar
+LOG_DIR=./logs
+LOGBACK_FILENAME=./logs/app.log
+LOGBACK_PATTERN=./logs/app-%d{yyyy-MM-dd}.%i.log
+MAX_FILE_SIZE=5MB
+MAX_HISTORY=60
+TOTAL_SIZE_CAP=2GB
+INSTANCE=o1
+root-level=info
+logging-filter=trace
+ebean-query-level=off
+ebean-config-level=off
+hbm-level=trace

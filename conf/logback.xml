@@ -1,0 +1,62 @@
+<!-- https://www.playframework.com/documentation/latest/SettingsLogger -->
+<configuration>
+
+  <conversionRule conversionWord="coloredLevel" converterClass="play.api.libs.logback.ColoredLevel" />
+
+  <property file="${logback.properties.file:-logback.properties}" />
+
+  <appender class="ch.qos.logback.core.rolling.RollingFileAppender" name="ROLLING_FILE">
+    <file>${LOGBACK_FILENAME}</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <fileNamePattern>${LOGBACK_PATTERN}</fileNamePattern>
+      <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+      <maxHistory>${MAX_HISTORY}</maxHistory>
+      <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+    </rollingPolicy>
+    <encoder>
+      <pattern>%date [%level] [%thread{15}] [%logger{15}] ${INSTANCE}-%mdc{userid}: %message%n%xException</pattern>
+    </encoder>
+  </appender>
+
+  <!--<appender name="FILE" class="ch.qos.logback.core.FileAppender">-->
+    <!--<file>${application.home:-.}/logs/application.log</file>-->
+    <!--<encoder>-->
+      <!--<pattern>%date [%level] from %logger in %thread  %mdc{X-UUID:&#45;&#45;} - %message%n%xException</pattern>-->
+    <!--</encoder>-->
+  <!--</appender>-->
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%coloredLevel %logger{15}  %mdc{X-UUID:--} - %message%n%xException{10}</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="ASYNCSTDOUT" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="STDOUT" />
+  </appender>
+
+  <!--<logger name="play" level="INFO" />-->
+  <!--<logger name="application" level="INFO" />-->
+
+  <!-- Off these ones as they are annoying, and anyway we manage configuration ourselves -->
+  <logger name="com.avaje.ebean.config.PropertyMapLoader" level="OFF" />
+  <logger name="com.avaje.ebeaninternal.server.core.XmlConfigLoader" level="OFF" />
+  <logger name="com.avaje.ebeaninternal.server.lib.BackgroundThread" level="OFF" />
+  <logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF" />
+
+  <logger name="org.hibernate.SQL" level="${hbm-level}" />
+  <logger name="org.hibernate.type.descriptor.sql" level="${hbm-level}" />
+
+  <logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF" />
+  <!-- https://hibernate.atlassian.net/browse/HV-1323 -->
+  <logger name="org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator" level="ERROR" />
+
+  <logger name="com.am.common.utils.LoggingFilter" level="${logging-filter}" />
+
+  <root level="${root-level}">
+    <!-- don't push below line to production -->
+    <!--<appender-ref ref="ASYNCSTDOUT" />-->
+    <appender-ref ref="ROLLING_FILE" />
+  </root>
+
+</configuration>
