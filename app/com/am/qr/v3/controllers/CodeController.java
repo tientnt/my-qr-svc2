@@ -1,9 +1,7 @@
 package com.am.qr.v3.controllers;
 
-import com.am.common.utils.Constants;
-import com.am.common.utils.FormHelper;
-import com.am.common.utils.JWTSecured;
-import com.am.common.utils.Response;
+import com.am.common.exception.AMException;
+import com.am.common.utils.*;
 import com.am.qr.v3.dtos.CodeRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.typesafe.config.Config;
@@ -38,7 +36,7 @@ public class CodeController extends Controller {
     }
 
     @Security.Authenticated(JWTSecured.class)
-    public CompletionStage<Result> scanCode() {
+    public CompletionStage<Result> scanCode() throws AMException {
         Form<CodeRequest> formData = formFactory.form(CodeRequest.class)
                                                 .bind(FormHelper.requestDataCamelCase(request())
                                                         , CodeRequest.ALLOWED_FIELDS);
@@ -50,53 +48,35 @@ public class CodeController extends Controller {
                                                         formData.errorsAsJson()))));
 
         }
-        CodeRequest requestData = formData.get();
+
+        JsonNode requestAsJson = request().body().asJson();
+        String serviceAsString = requestAsJson.get(CodeRequest.SVC_TAG).asText();
+        logger.debug("Request as JsonNode: \n{}", AMObjectMapper.toPrettyJsonString(requestAsJson));
+
         String requestToken = request().header(Constants.AUTH_TOKEN_HEADER).orElse(null);
-        switch (requestData.getSvc()) {
-            case Constants.SVC_DOOR_ACCESS:
-                return doorAccessResult(requestData.getCode(), requestData.getType(), requestToken);
-            case Constants.SVC_EVOUCHER:
-                return evoucherResult(requestData.getCode(), requestData.getType(), requestToken);
+        Service requestService = Service.fromServiceName(serviceAsString);
+        String nextUrl;
+        switch (requestService) {
+            case DOOR_ACCESS:
+                nextUrl = config.getString("app.door_access_code_url");
+                return proceedToNextService(nextUrl, requestAsJson, requestToken);
+            case EVOUCHER:
+                nextUrl = config.getString("app.e_voucher_url");
+                return proceedToNextService(nextUrl, requestAsJson, requestToken);
+            default:
+                return CompletableFuture.completedFuture(
+                        badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
+                                                            Constants.INVALID_SVC_TYPE,
+                                                            null,
+                                                            formData.errorsAsJson()))));
         }
-        return CompletableFuture.completedFuture(
-                badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
-                                                    Constants.INVALID_SVC_TYPE,
-                                                    null,
-                                                    formData.errorsAsJson()))));
-
     }
 
-    private CompletionStage<Result> evoucherResult(String code, String type, String requestToken) {
-        String mockupData = "{\n" +
-                            "   \"code\": 200,\n" +
-                            "   \"message\": \"Scan code result\",\n" +
-                            "   \"data\":    {\n" +
-                            "      \"status\": \"SUCCESS\",\n" +
-                            "      \"message\": \"\",\n" +
-                            "      \"scanned_code\": \"" + code + "\",\n" +
-                            "      \"detail\": {\n" +
-                            "         \"code_status\": \"VALID\",\n" +
-                            "         \"code_message\": \"You may proceed to redeem\",\n" +
-                            "         \"image\": \"\",\n" +
-                            "         \"voucher_name\": \"DTE $10 Voucher\",\n" +
-                            "         \"voucher_value\": \"$10.00\",\n" +
-                            "         \"validity_start_date\": \"10 Jan 2018\",\n" +
-                            "         \"validity_end_date\": \"10 Feb 2018\"\n" +
-                            "       }\n" +
-                            "   },\n" +
-                            "   \"errors\": null\n" +
-                            "}\n";
-        JsonNode result = Json.parse(mockupData);
-        return CompletableFuture.completedFuture(ok(result));
-    }
-
-    private CompletionStage<Result> doorAccessResult(String code, String type, String requestToken) {
-        String codeUrl = config.getString("app.door_access_code_url");
-        JsonNode codeRequest = Json.newObject().put("code", code).put("type", type);
-        return wsClient.url(codeUrl)
+    private CompletionStage<Result> proceedToNextService(String nextUrl, JsonNode requestAsJson, String requestToken) {
+        return wsClient.url(nextUrl)
                        .setContentType(Constants.CONTENT_TYPE)
                        .addHeader(Constants.AUTH_TOKEN_HEADER, requestToken)
-                       .post(codeRequest)
+                       .post(requestAsJson)
                        .thenApply(wsResponse -> status(wsResponse.getStatus(),
                                                        wsResponse.getBody()).as(Constants.CONTENT_TYPE));
     }

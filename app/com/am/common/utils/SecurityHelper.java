@@ -3,6 +3,7 @@ package com.am.common.utils;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import org.joda.time.DateTime;
 import play.Logger;
 import play.libs.Json;
@@ -16,6 +17,7 @@ import java.io.InputStream;
 import java.security.*;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -23,6 +25,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class SecurityHelper {
 
     private static final Logger.ALogger logger = Logger.of(SecurityHelper.class);
+
+    private static final String CLIENT_ID = "client_id";
+
+    private static final String SUB = "sub";
+
+    private static final String EXP = "exp";
 
     public static String generateUID() {
         // generate 32 characters uid
@@ -54,6 +62,29 @@ public class SecurityHelper {
             logger.error("getJWTClaim: {}", ex.getMessage());
         }
         return null;
+    }
+
+    public static String getJWTClaimAsString(String token, String claim) {
+        try {
+            String jsonClaim = new String(Base64.getDecoder().decode(token.split("\\.")[1]));
+            JsonNode jsonNode = Json.parse(jsonClaim);
+            return jsonNode.get(claim).textValue();
+        } catch (Exception ex) {
+            logger.error("getJWTClaim: {}", ex.getMessage());
+        }
+        return null;
+    }
+
+    public static String getJWTClientId(String token) {
+        return getJWTClaimAsString(token, CLIENT_ID);
+    }
+
+    public static JsonNode getJWTSubNode(String token) {
+        return getJWTClaim(token, SUB);
+    }
+
+    public static JsonNode getJWTExpNode(String token) {
+        return getJWTClaim(token, EXP);
     }
 
     public static Date getExpiredAt(int expiresIn) {
@@ -208,5 +239,28 @@ public class SecurityHelper {
 
         return publicSignature.verify(signatureBytes);
     }
+
+    public static String generateAccessTokenWithClientId(String subject, String clientId, String clientSecret, Date expireAt) {
+
+        String jwt = Jwts.builder()
+                         .setSubject(subject)
+                         .claim(CLIENT_ID, clientId)
+                         .setExpiration(expireAt)
+                         .signWith(SignatureAlgorithm.HS256, clientSecret)
+                         .compact();
+        return jwt;
+    }
+
+    public static String generateAccessToken(String subject, String secretKey, Date expireAt, Map<String, Object> claimsMap) {
+
+        String jwt = Jwts.builder()
+                         .setSubject(subject)
+                         .setExpiration(expireAt)
+                         .setClaims(claimsMap)
+                         .signWith(SignatureAlgorithm.HS256, secretKey)
+                         .compact();
+        return jwt;
+    }
+
 
 }
