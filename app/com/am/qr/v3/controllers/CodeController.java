@@ -3,6 +3,7 @@ package com.am.qr.v3.controllers;
 import com.am.common.exception.AMException;
 import com.am.common.utils.*;
 import com.am.qr.v3.dtos.CodeRequest;
+import com.am.qr.v3.dtos.ImportHashRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.typesafe.config.Config;
 import org.apache.http.HttpStatus;
@@ -79,5 +80,24 @@ public class CodeController extends Controller {
                        .post(requestAsJson)
                        .thenApply(wsResponse -> status(wsResponse.getStatus(),
                                                        wsResponse.getBody()).as(Constants.CONTENT_TYPE));
+    }
+
+    @Security.Authenticated(JWTSecured.class)
+    public CompletionStage<Result> importHashes() {
+        Form<ImportHashRequest> formData = formFactory.form(ImportHashRequest.class)
+                                                      .bind(FormHelper.requestDataCamelCase(request())
+                                                              , ImportHashRequest.ALLOWED_FIELDS);
+        if (formData.hasErrors()) {
+            return CompletableFuture.completedFuture(
+                    badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
+                                                        Constants.INVALID_REQUEST_PARAMS,
+                                                        null,
+                                                        formData.errorsAsJson()))));
+
+        }
+
+        ImportHashRequest data = formData.get();
+
+        return CompletableFuture.completedFuture(ok());
     }
 }

@@ -11,3 +11,5 @@ GET     /healthcheck                    controllers.CommonController.healthCheck
 GET     /assets/*file                   controllers.Assets.versioned(path="/public", file: Asset)
 
 POST    /api/v3/code                    com.am.qr.v3.controllers.CodeController.scanCode()
+
+POST    /api/v3/import-hashes             com.am.qr.v3.controllers.CodeController.importHashes()
