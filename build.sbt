@@ -9,10 +9,16 @@ PlayKeys.externalizeResources := false
  
 libraryDependencies ++= Seq(
   guice,
+  javaJpa,
   javaWs,
   ws,
+  "com.h2database" % "h2" % "1.4.194",
+  "mysql" % "mysql-connector-java" % "5.1.41",
   "org.apache.httpcomponents" % "httpcore" % "4.4.6",
-  "org.mapstruct" % "mapstruct-processor" % "1.2.0.Final",
+  "org.hibernate" % "hibernate-core" % "5.4.0.Final",
+  "org.apache.httpcomponents" % "httpcore" % "4.4.6",
+  "org.mapstruct" % "mapstruct" % "1.3.0.Final",
+  "org.mapstruct" % "mapstruct-processor" % "1.3.0.Final",
   "io.jsonwebtoken" % "jjwt" % "0.9.1",
 
   javaWs % "test",
