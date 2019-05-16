@@ -4,8 +4,10 @@ import com.am.common.exception.AMException;
 import com.am.common.utils.*;
 import com.am.qr.v3.dtos.CodeRequest;
 import com.am.qr.v3.dtos.ImportHashRequest;
+import com.am.qr.v3.services.CodeService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.typesafe.config.Config;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import play.Logger;
 import play.data.Form;
@@ -29,11 +31,14 @@ public class CodeController extends Controller {
 
     private final Config config;
 
+    private CodeService codeService;
+
     @Inject
-    public CodeController(FormFactory formFactory, WSClient wsClient, Config config) {
+    public CodeController(FormFactory formFactory, WSClient wsClient, Config config, CodeService codeService) {
         this.formFactory = formFactory;
         this.wsClient = wsClient;
         this.config = config;
+        this.codeService = codeService;
     }
 
     @Security.Authenticated(JWTSecured.class)
@@ -84,20 +89,27 @@ public class CodeController extends Controller {
 
     @Security.Authenticated(JWTSecured.class)
     public CompletionStage<Result> importHashes() {
-        Form<ImportHashRequest> formData = formFactory.form(ImportHashRequest.class)
-                                                      .bind(FormHelper.requestDataCamelCase(request())
-                                                              , ImportHashRequest.ALLOWED_FIELDS);
-        if (formData.hasErrors()) {
-            return CompletableFuture.completedFuture(
-                    badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
-                                                        Constants.INVALID_REQUEST_PARAMS,
-                                                        null,
-                                                        formData.errorsAsJson()))));
+        ImportHashRequest data = Json.fromJson(request().body().asJson(), ImportHashRequest.class);
 
-        }
+        return CompletableFuture.supplyAsync(() -> {
+            boolean result = codeService.importHashes(data.getSvc(), data.getHashes());
+            if (result) {
+                return Response.success("import hashes success", null);
+            }
+            return Response.badRequest("import failed", null);
+        });
+    }
 
-        ImportHashRequest data = formData.get();
+    @Security.Authenticated(JWTSecured.class)
+    public CompletionStage<Result> getSvc() {
+        String code = request().getQueryString("code");
 
-        return CompletableFuture.completedFuture(ok());
+        return CompletableFuture.supplyAsync(() -> {
+            String result = codeService.findServiceByCode(code);
+            if (StringUtils.isNotEmpty(result)) {
+                return Response.success(result, null);
+            }
+            return Response.badRequest("no hash found", null);
+        });
     }
 }

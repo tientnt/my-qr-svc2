@@ -20,6 +20,7 @@ libraryDependencies ++= Seq(
   "org.mapstruct" % "mapstruct" % "1.3.0.Final",
   "org.mapstruct" % "mapstruct-processor" % "1.3.0.Final",
   "io.jsonwebtoken" % "jjwt" % "0.9.1",
+  "org.projectlombok" % "lombok" % "1.18.8" % "provided",
 
   javaWs % "test",
   "org.awaitility" % "awaitility" % "2.0.0" % "test",

@@ -39,15 +39,50 @@
   <!--<logger name="application" level="INFO" />-->
 
   <!-- Off these ones as they are annoying, and anyway we manage configuration ourselves -->
-  <logger name="com.avaje.ebean.config.PropertyMapLoader" level="OFF" />
-  <logger name="com.avaje.ebeaninternal.server.core.XmlConfigLoader" level="OFF" />
-  <logger name="com.avaje.ebeaninternal.server.lib.BackgroundThread" level="OFF" />
-  <logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF" />
+  <logger name="com.avaje.ebean.config.PropertyMapLoader" level="OFF"/>
+  <logger name="com.avaje.ebeaninternal.server.core.XmlConfigLoader" level="OFF"/>
+  <logger name="com.avaje.ebeaninternal.server.lib.BackgroundThread" level="OFF"/>
+  <logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF"/>
 
-  <logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF" />
+  <logger name="org.hibernate.SQL" level="${hbm-level}"/>
+  <logger name="org.hibernate.type.descriptor.sql" level="${hbm-level}"/>
+
+  <logger name="org.hibernate.query" level="${hibernate-query-level}"/>
+  <logger name="org.hibernate.hql" level="${hibernate-query-level}"/>
+  <logger name="org.hibernate.loader" level="${hibernate-query-level}"/>
+  <logger name="org.hibernate.persister" level="${hibernate-query-level}"/>
+
+  <logger name="org.hibernate.event" level="${hibernate-event-level}"/>
+  <logger name="org.hibernate.engine" level="${hibernate-event-level}"/>
+  <logger name="org.hibernate.resource" level="${hibernate-event-level}"/>
+  <logger name="org.hibernate.internal" level="${hibernate-event-level}"/>
+  <logger name="org.hibernate.mapping" level="${hibernate-event-level}"/>
+
+  <logger name="org.hibernate.cfg" level="${hibernate-config-level}"/>
+
+  <logger name="org.hibernate.boot" level="${hibernate-boot-level}"/>
+  <logger name="org.hibernate.jpa" level="${hibernate-boot-level}"/>
+  <logger name="org.hibernate.integrator" level="${hibernate-boot-level}"/>
+  <logger name="org.hibernate.cache.internal" level="${hibernate-boot-level}"/>
+  <logger name="org.hibernate.type" level="${hibernate-boot-level}"/>
+  <logger name="org.hibernate.id.factory" level="${hibernate-boot-level}"/>
+  <logger name="org.hibernate.engine.jdbc.env" level="${hibernate-boot-level}"/>
+  <logger name="org.hibernate.mapping" level="${hibernate-boot-level}"/>
+
+
+  <logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF"/>
   <!-- https://hibernate.atlassian.net/browse/HV-1323 -->
+  <logger name="org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator" level="ERROR"/>
+  <logger name="org.hibernate.validator" level="ERROR"/>
 
-  <logger name="com.am.common.utils.LoggingFilter" level="${logging-filter}" />
+  <!--Pool management logs-->
+  <logger name="play.shaded.ahc" level="${pool-management-level}"/>
+  <logger name="com.zaxxer.hikari" level="${pool-management-level}"/>
+  <logger name="com.ning.http.client.providers.netty" level="${pool-management-level}"/>
+  <logger name="org.aspectj" level="${pool-management-level}"/>
+  <logger name="javax.management" level="${pool-management-level}"/>
+
+  <logger name="com.am.common.utils.LoggingFilter" level="${logging-filter}"/>
 
   <root level="${root-level}">
     <!-- don't push below line to production -->
