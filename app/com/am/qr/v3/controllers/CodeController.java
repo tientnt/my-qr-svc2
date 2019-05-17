@@ -84,7 +84,7 @@ public class CodeController extends Controller {
         if (route == null) {
             return CompletableFuture.completedFuture(
                     badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
-                                                        Constants.INVALID_REQUEST_PARAMS,
+                                                        Constants.INVALID_VOUCHER,
                                                         null,
                                                         null))));
         }
