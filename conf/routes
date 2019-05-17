@@ -12,6 +12,8 @@ GET     /assets/*file                   controllers.Assets.versioned(path="/publ
 
 POST    /api/v3/code                    com.am.qr.v3.controllers.CodeController.scanCode()
 
+POST    /api/v3/code-nosvc              com.am.qr.v3.controllers.CodeController.scanCodeWoSvc()
+
 POST    /api/v3/import-hashes           com.am.qr.v3.controllers.CodeController.importHashes()
 
 GET     /api/v3/get-svc                 com.am.qr.v3.controllers.CodeController.getSvc()

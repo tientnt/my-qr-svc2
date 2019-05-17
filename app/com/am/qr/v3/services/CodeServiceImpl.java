@@ -1,5 +1,6 @@
 package com.am.qr.v3.services;
 
+import com.am.qr.v3.models.Route;
 import com.am.qr.v3.repositories.CodeRepository;
 
 import javax.inject.Inject;
@@ -18,5 +19,10 @@ public class CodeServiceImpl implements CodeService {
     @Override
     public String findServiceByCode(String code) {
         return codeRepository.findServiceByCode(code);
+    }
+
+    @Override
+    public Route findByCode(String code) {
+        return codeRepository.findByCode(code);
     }
 }
