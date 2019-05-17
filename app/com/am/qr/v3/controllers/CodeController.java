@@ -22,6 +22,7 @@ import play.mvc.Security;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -76,10 +77,43 @@ public class CodeController extends Controller {
     }
 
     @Security.Authenticated(JWTSecured.class)
-    public CompletionStage<Result> scanCodeWoSvc() throws AMException {
+    public CompletionStage<Result> scanCodesNoSvc() throws AMException {
         JsonNode requestAsJson = request().body().asJson();
         logger.debug("Request as JsonNode: \n{}", AMObjectMapper.toPrettyJsonString(requestAsJson));
-        String code = requestAsJson.get("code").asText();
+        String codes = requestAsJson.get("code").asText();
+        if (StringUtils.isEmpty(codes)) {
+            return CompletableFuture.completedFuture(
+                    badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
+                                                        Constants.INVALID_REQUEST_PARAMS,
+                                                        null,
+                                                        null))));
+        }
+
+
+
+        List<String> codeList = Arrays.asList(codes.split(","));
+        List<String> invalidCodeList = new ArrayList<>();
+        for (String code : codeList) {
+            Route route = codeService.findByCode(code);
+            if (route == null) {
+                invalidCodeList.add(code);
+            } else {
+                if (route.getSvc().contains(",")) {
+                    List<String> svcList = new ArrayList<>();
+
+                }
+            }
+            if (svcArr.length != codeList.size()) {
+                route.setSvc(StringUtils.join(codeList, ","));
+                dbService.saveEntity(route);
+            }
+            if (codeList.size() > 1) {
+                logger.info("code {}, id {} belong to multiple services {}", code, route.getId(), route.getSvc());
+            }
+        }
+        if (codes.contains(",")) {
+            String[] codeArr = codes.split(",");
+        }
         Route route = codeService.findByCode(code);
         if (route == null) {
             return CompletableFuture.completedFuture(
