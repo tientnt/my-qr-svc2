@@ -11,6 +11,8 @@ public final class Constants {
 
     public final static String INVALID_VOUCHER = "Invalid Voucher";
 
+    public final static String INVALID_MULTIPLE_SVC = "Multiple Services %s: %s - %s";
+
     public final static String INVALID_SVC_TYPE = "Invalid svc type";
 
     public final static String SVC_DOOR_ACCESS = "door-access";

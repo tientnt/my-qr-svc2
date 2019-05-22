@@ -89,10 +89,10 @@ public class CodeController extends Controller {
                                                         null))));
         }
 
-
-
         List<String> codeList = Arrays.asList(codes.split(","));
         List<String> invalidCodeList = new ArrayList<>();
+        String svcStr = null;
+        String error = null;
         for (String code : codeList) {
             Route route = codeService.findByCode(code);
             if (route == null) {
@@ -100,50 +100,53 @@ public class CodeController extends Controller {
             } else {
                 if (route.getSvc().contains(",")) {
                     List<String> svcList = new ArrayList<>();
-
+                    String[] svcArr = route.getSvc().split(",");
+                    for (String svc : svcArr) {
+                        if (!svcList.contains(svc)) {
+                            svcList.add(svc);
+                        }
+                    }
+                    //update route if it has duplicate svc
+                    if (svcArr.length != svcList.size()) {
+                        route.setSvc(StringUtils.join(svcList, ","));
+                        dbService.saveEntity(route);
+                    }
+                    if (svcList.size() > 1) {
+                        logger.error("code {}, id {} belong to multiple services {}",
+                                     code,
+                                     route.getId(),
+                                     route.getSvc());
+                        error = String.format(Constants.INVALID_MULTIPLE_SVC, code, svcList.get(0), svcList.get(1));
+                        break;
+                    }
                 }
-            }
-            if (svcArr.length != codeList.size()) {
-                route.setSvc(StringUtils.join(codeList, ","));
-                dbService.saveEntity(route);
-            }
-            if (codeList.size() > 1) {
-                logger.info("code {}, id {} belong to multiple services {}", code, route.getId(), route.getSvc());
+                if (!StringUtils.isEmpty(svcStr) && !svcStr.equalsIgnoreCase(route.getSvc())) {
+                    logger.error("More than 1 service type in one request {}: {} - {}", code, svcStr, route.getSvc());
+                    error = String.format(Constants.INVALID_MULTIPLE_SVC, code, svcStr, route.getSvc());
+                    break;
+                }
+                svcStr = route.getSvc();
             }
         }
-        if (codes.contains(",")) {
-            String[] codeArr = codes.split(",");
-        }
-        Route route = codeService.findByCode(code);
-        if (route == null) {
+
+        if (invalidCodeList.size() > 0) {
             return CompletableFuture.completedFuture(
                     badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
                                                         Constants.INVALID_VOUCHER,
+                                                        invalidCodeList,
+                                                        null))));
+        }
+        if (!StringUtils.isEmpty(error)) {
+            return CompletableFuture.completedFuture(
+                    badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
+                                                        error,
                                                         null,
                                                         null))));
         }
 
-        List<String> svcList = new ArrayList<>();
-        if (route.getSvc().contains(",")) {
-            String[] svcArr = route.getSvc().split(",");
-            for (String svc : svcArr) {
-                if (!svcList.contains(svc)) {
-                    svcList.add(svc);
-                }
-            }
-
-            if (svcArr.length != svcList.size()) {
-                route.setSvc(StringUtils.join(svcList, ","));
-                dbService.saveEntity(route);
-            }
-            if (svcList.size() > 1) {
-                logger.info("code {}, id {} belong to multiple services {}", code, route.getId(), route.getSvc());
-            }
-        }
-
         //query only first service
         String requestToken = request().header(Constants.AUTH_TOKEN_HEADER).orElse(null);
-        Service requestService = Service.fromServiceName(svcList.size() > 0 ? svcList.get(0) : route.getSvc());
+        Service requestService = Service.fromServiceName(svcStr);
         return processCode(requestService, requestAsJson, requestToken);
     }
 
