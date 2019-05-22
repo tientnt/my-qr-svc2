@@ -77,9 +77,19 @@ public class CodeController extends Controller {
     }
 
     @Security.Authenticated(JWTSecured.class)
-    public CompletionStage<Result> scanCodesNoSvc() throws AMException {
+    public CompletionStage<Result> codesValidateNoSvc() {
+        String endpoint = config.getString("app.evoucher_codes_validate_url");
+        return processCodesNoSvc(endpoint);
+    }
+
+    @Security.Authenticated(JWTSecured.class)
+    public CompletionStage<Result> codesRedeemNoSvc() {
+        String endpoint = config.getString("app.evoucher_codes_redeem_url");
+        return processCodesNoSvc(endpoint);
+    }
+
+    private CompletionStage<Result> processCodesNoSvc(String endpoint) {
         JsonNode requestAsJson = request().body().asJson();
-        logger.debug("Request as JsonNode: \n{}", AMObjectMapper.toPrettyJsonString(requestAsJson));
         String codes = requestAsJson.get("code").asText();
         if (StringUtils.isEmpty(codes)) {
             return CompletableFuture.completedFuture(
@@ -144,10 +154,19 @@ public class CodeController extends Controller {
                                                         null))));
         }
 
-        //query only first service
         String requestToken = request().header(Constants.AUTH_TOKEN_HEADER).orElse(null);
         Service requestService = Service.fromServiceName(svcStr);
-        return processCode(requestService, requestAsJson, requestToken);
+        switch (requestService) {
+            case EVOUCHER:
+                return proceedToNextService(endpoint, requestAsJson, requestToken);
+            default:
+                return CompletableFuture.completedFuture(
+                        badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
+                                                            Constants.INVALID_SVC_TYPE,
+                                                            null,
+                                                            null))));
+
+        }
     }
 
     private CompletionStage<Result> processCode(Service svc, JsonNode requestBody, String requestToken) {
@@ -157,7 +176,7 @@ public class CodeController extends Controller {
                 nextUrl = config.getString("app.door_access_code_url");
                 return proceedToNextService(nextUrl, requestBody, requestToken);
             case EVOUCHER:
-                nextUrl = config.getString("app.e_voucher_url");
+                nextUrl = config.getString("app.evoucher_merchant_url");
                 return proceedToNextService(nextUrl, requestBody, requestToken);
             default:
                 return CompletableFuture.completedFuture(
