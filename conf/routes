@@ -12,9 +12,9 @@ GET     /assets/*file                   controllers.Assets.versioned(path="/publ
 
 POST    /api/v3/code                    com.am.qr.v3.controllers.CodeController.scanCode()
 
-POST    /api/v3/codes-validate-nosvc    com.am.qr.v3.controllers.CodeController.codesValidateNoSvc()
+POST    /api/v3/codes-validate          com.am.qr.v3.controllers.CodeController.codesValidateNoSvc()
 
-POST    /api/v3/codes-redeem-nosvc      com.am.qr.v3.controllers.CodeController.codesRedeemNoSvc()
+POST    /api/v3/codes-redeem            com.am.qr.v3.controllers.CodeController.codesRedeemNoSvc()
 
 POST    /api/v3/import-hashes           com.am.qr.v3.controllers.CodeController.importHashes()
 
