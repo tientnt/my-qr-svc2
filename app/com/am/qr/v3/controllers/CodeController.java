@@ -21,9 +21,7 @@ import play.mvc.Result;
 import play.mvc.Security;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -140,17 +138,24 @@ public class CodeController extends Controller {
         }
 
         if (invalidCodeList.size() > 0) {
+            Map<String, String> responseData = new HashMap<>();
+            error = Constants.INVALID_VOUCHER + StringUtils.join(invalidCodeList, ",");
+            responseData.put("status", Constants.INVALID_VOUCHER);
+            responseData.put("message", error);
             return CompletableFuture.completedFuture(
-                    badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
-                                                        Constants.INVALID_VOUCHER,
-                                                        invalidCodeList,
+                    badRequest(Json.toJson(new Response(HttpStatus.SC_OK,
+                                                        error,
+                                                        responseData,
                                                         null))));
         }
         if (!StringUtils.isEmpty(error)) {
+            Map<String, String> responseData = new HashMap<>();
+            responseData.put("status", Constants.INVALID_VOUCHER);
+            responseData.put("message", error);
             return CompletableFuture.completedFuture(
-                    badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
+                    badRequest(Json.toJson(new Response(HttpStatus.SC_OK,
                                                         error,
-                                                        null,
+                                                        responseData,
                                                         null))));
         }
 
