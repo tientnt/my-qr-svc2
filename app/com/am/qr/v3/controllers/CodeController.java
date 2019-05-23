@@ -140,7 +140,7 @@ public class CodeController extends Controller {
 
         if (invalidCodeList.size() > 0) {
             Map<String, String> responseData = new HashMap<>();
-            error = Constants.INVALID_VOUCHER + StringUtils.join(invalidCodeList, ",");
+            error = Constants.INVALID_VOUCHER + ": " + StringUtils.join(invalidCodeList, ",");
             responseData.put("status", Constants.INVALID_VOUCHER);
             responseData.put("message", error);
             return CompletableFuture.completedFuture(
