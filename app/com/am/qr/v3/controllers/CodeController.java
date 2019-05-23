@@ -97,6 +97,7 @@ public class CodeController extends Controller {
                                                         null))));
         }
 
+        codes = codes.replace(" ", "");
         List<String> codeList = Arrays.asList(codes.split(","));
         List<String> invalidCodeList = new ArrayList<>();
         String svcStr = null;
