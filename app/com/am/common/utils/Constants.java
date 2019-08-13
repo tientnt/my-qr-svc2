@@ -15,6 +15,10 @@ public final class Constants {
 
     public final static String INVALID_SVC_TYPE = "Invalid svc type";
 
+    public final static String INVALID_CODE = "Invalid Code";
+
+    public final static String SUCCESS = "Success";
+
     public final static String SVC_DOOR_ACCESS = "door-access";
 
     public final static String SVC_EVOUCHER = "evoucher";

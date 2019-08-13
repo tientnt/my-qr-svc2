@@ -19,3 +19,5 @@ POST    /api/v3/voucher/codes-redeem    com.am.qr.v3.controllers.CodeController.
 POST    /api/v3/import-hashes           com.am.qr.v3.controllers.CodeController.importHashes()
 
 GET     /api/v3/get-svc                 com.am.qr.v3.controllers.CodeController.getSvc()
+
+POST    /api/v3/code-v2                 com.am.qr.v3.controllers.CodeController.scanCodeV2()

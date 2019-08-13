@@ -25,4 +25,9 @@ public class CodeServiceImpl implements CodeService {
     public Route findByCode(String code) {
         return codeRepository.findByCode(code);
     }
+
+    @Override
+    public Route findByCodeAndSvc(String code, String svc) {
+        return codeRepository.findByCodeAndSvc(code, svc);
+    }
 }

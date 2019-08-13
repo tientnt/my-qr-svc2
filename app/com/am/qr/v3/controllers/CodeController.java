@@ -227,4 +227,44 @@ public class CodeController extends Controller {
             return Response.badRequest("no hash found", null);
         });
     }
+
+    @Security.Authenticated(JWTSecured.class)
+    public CompletionStage<Result> scanCodeV2() throws AMException {
+        Form<CodeRequest> formData = formFactory.form(CodeRequest.class)
+                                                .bind(FormHelper.requestDataCamelCase(request())
+                                                        , CodeRequest.ALLOWED_FIELDS);
+        if (formData.hasErrors()) {
+            return CompletableFuture.completedFuture(
+                    badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
+                                                        Constants.INVALID_REQUEST_PARAMS,
+                                                        null,
+                                                        formData.errorsAsJson()))));
+
+        }
+
+        JsonNode requestAsJson = request().body().asJson();
+        String serviceAsString = requestAsJson.get(CodeRequest.SVC_TAG).asText();
+        logger.debug("Request as JsonNode: \n{}", AMObjectMapper.toPrettyJsonString(requestAsJson));
+
+        String code = requestAsJson.get("code").asText();
+        Route route = codeService.findByCodeAndSvc(code, serviceAsString);
+        Map<String, String> responseData = new HashMap<>();
+        if (route == null) {
+            String error = Constants.INVALID_CODE + ": " + code;
+            responseData.put("status", Constants.INVALID_CODE);
+            responseData.put("message", error);
+            return CompletableFuture.completedFuture(
+                    badRequest(Json.toJson(new Response(HttpStatus.SC_OK,
+                                                        error,
+                                                        responseData,
+                                                        null))));
+        }
+        responseData.put("status", Constants.SUCCESS);
+        responseData.put("message", Constants.SUCCESS);
+        return CompletableFuture.completedFuture(
+                ok(Json.toJson(new Response(HttpStatus.SC_OK,
+                                            Constants.SUCCESS,
+                                            responseData,
+                                            null))));
+    }
 }

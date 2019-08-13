@@ -13,4 +13,6 @@ public interface CodeRepository {
     boolean importHashes(String svc, List<String> hashes);
 
     Route findByCode(String code);
+
+    Route findByCodeAndSvc(String code, String svc);
 }
