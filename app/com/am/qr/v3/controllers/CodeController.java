@@ -254,7 +254,7 @@ public class CodeController extends Controller {
             responseData.put("status", Constants.INVALID_CODE);
             responseData.put("message", error);
             return CompletableFuture.completedFuture(
-                    badRequest(Json.toJson(new Response(HttpStatus.SC_OK,
+                    badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
                                                         error,
                                                         responseData,
                                                         null))));
