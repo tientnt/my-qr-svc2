@@ -12,4 +12,6 @@ public interface CodeService {
     String findServiceByCode(String code);
 
     Route findByCode(String code);
+
+    Route findByCodeAndSvc(String code, String svc);
 }

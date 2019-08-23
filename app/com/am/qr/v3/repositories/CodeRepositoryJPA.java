@@ -63,6 +63,24 @@ public class CodeRepositoryJPA implements CodeRepository {
     }
 
     @Override
+    public Route findByCodeAndSvc(String code, String svc) {
+        return jpaApi.withTransaction(em -> {
+            String sql1 = "from Route where svc = :svc and hash_value = UNHEX(sha2(:code,256))";
+            List<Route> routes = em.createQuery(sql1, Route.class)
+                                   .setParameter("svc", svc)
+                                   .setParameter("code", code)
+                                   .getResultList();
+            if (routes.size() > 0) {
+                byte[] hashValue = routes.get(0).getHashValue();
+                String hash = Hex.encodeHexString(hashValue);
+                logger.debug(hash);
+                return routes.get(0);
+            }
+            return null;
+        });
+    }
+
+    @Override
     public boolean importHashes(String svc, List<String> hashes) {
         String insertSql = "insert into route (svc, hash_value) values (:svc, UNHEX(:hashValue))";
         //String updateSql = "update route set svc = concat(svc,',',:svc) where hash_value = UNHEX(:hashValue)";
