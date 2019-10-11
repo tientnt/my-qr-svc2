@@ -14,5 +14,7 @@ public interface CodeRepository {
 
     Route findByCode(String code);
 
+    List<Route> findListByCode(String code);
+
     Route findByCodeAndSvc(String code, String svc);
 }
