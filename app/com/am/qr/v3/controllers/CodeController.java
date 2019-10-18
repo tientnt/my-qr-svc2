@@ -5,6 +5,7 @@ import com.am.common.services.DbService;
 import com.am.common.utils.*;
 import com.am.qr.v3.dtos.CodeRequest;
 import com.am.qr.v3.dtos.ImportHashRequest;
+import com.am.qr.v3.dtos.ValidateNewCodeRequest;
 import com.am.qr.v3.models.Route;
 import com.am.qr.v3.services.CodeService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -54,8 +55,7 @@ public class CodeController extends Controller {
     @Security.Authenticated(JWTSecured.class)
     public CompletionStage<Result> scanCode() throws AMException {
         Form<CodeRequest> formData = formFactory.form(CodeRequest.class)
-                                                .bind(FormHelper.requestDataCamelCase(request())
-                                                        , CodeRequest.ALLOWED_FIELDS);
+                                                .bind(FormHelper.requestDataCamelCase(request()));
         if (formData.hasErrors()) {
             return CompletableFuture.completedFuture(
                     badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
@@ -184,6 +184,9 @@ public class CodeController extends Controller {
             case EVOUCHER:
                 nextUrl = config.getString("app.evoucher_merchant_url");
                 return proceedToNextService(nextUrl, requestBody, requestToken);
+            case WWPM:
+                nextUrl = config.getString("app.wwpm_validate_code_url");
+                return proceedToNextService(nextUrl, requestBody, requestToken);
             default:
                 return CompletableFuture.completedFuture(
                         badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
@@ -231,8 +234,7 @@ public class CodeController extends Controller {
     @Security.Authenticated(JWTSecured.class)
     public CompletionStage<Result> scanCodeV2() throws AMException {
         Form<CodeRequest> formData = formFactory.form(CodeRequest.class)
-                                                .bind(FormHelper.requestDataCamelCase(request())
-                                                        , CodeRequest.ALLOWED_FIELDS);
+                                                .bind(FormHelper.requestDataCamelCase(request()));
         if (formData.hasErrors()) {
             return CompletableFuture.completedFuture(
                     badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
@@ -266,5 +268,42 @@ public class CodeController extends Controller {
                                             Constants.SUCCESS,
                                             responseData,
                                             null))));
+    }
+
+    @Security.Authenticated(JWTSecured.class)
+    public CompletionStage<Result> validateNewCode() throws AMException {
+        Form<ValidateNewCodeRequest> formData = formFactory.form(ValidateNewCodeRequest.class)
+                                                           .bind(FormHelper.requestDataCamelCase(request())
+                                                                   , ValidateNewCodeRequest.ALLOWED_FIELDS);
+        if (formData.hasErrors()) {
+            return CompletableFuture.completedFuture(
+                    badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
+                                                        Constants.INVALID_REQUEST_PARAMS,
+                                                        null,
+                                                        formData.errorsAsJson()))));
+
+        }
+
+        JsonNode requestAsJson = request().body().asJson();
+        String serviceAsString = requestAsJson.get(CodeRequest.SVC_TAG).asText();
+        logger.debug("Request as JsonNode: \n{}", AMObjectMapper.toPrettyJsonString(requestAsJson));
+
+        String code = requestAsJson.get("code").asText();
+        Route route = codeService.findByCodeAndSvc(code, serviceAsString);
+        Map<String, String> responseData = new HashMap<>();
+        if (null == route) {
+            Service requestService = Service.fromServiceName(serviceAsString);
+            String requestToken = request().header(Constants.AUTH_TOKEN_HEADER).orElse(null);
+            return processCode(requestService, requestAsJson, requestToken);
+        } else {
+            String error = Constants.EXISTED_CODE + ": " + code;
+            responseData.put("status", Constants.EXISTED_CODE);
+            responseData.put("message", error);
+            return CompletableFuture.completedFuture(
+                    badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
+                                                        error,
+                                                        responseData,
+                                                        null))));
+        }
     }
 }

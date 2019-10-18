@@ -9,11 +9,13 @@ package com.am.common.utils;
 public enum Service {
     DOOR_ACCESS("door-access"),
     EVOUCHER("evoucher"),
+    WWPM("wwpm"),
+    HPB("hpb"),
     UNKNOWN("unknown");
 
     private String serviceName;
 
-    Service (String serviceName){
+    Service(String serviceName) {
         this.serviceName = serviceName;
     }
 
@@ -21,9 +23,9 @@ public enum Service {
         return serviceName;
     }
 
-    public static Service fromServiceName(String serviceName){
-        for(Service svc : Service.values()){
-            if(svc.getServiceName().equals(serviceName)){
+    public static Service fromServiceName(String serviceName) {
+        for (Service svc : Service.values()) {
+            if (svc.getServiceName().equals(serviceName)) {
                 return svc;
             }
         }

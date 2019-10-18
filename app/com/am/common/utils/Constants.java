@@ -17,6 +17,8 @@ public final class Constants {
 
     public final static String INVALID_CODE = "Invalid Code";
 
+    public final static String EXISTED_CODE = "Code has been existed in our system";
+
     public final static String SUCCESS = "Success";
 
     public final static String SVC_DOOR_ACCESS = "door-access";
