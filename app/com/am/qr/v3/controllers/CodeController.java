@@ -55,8 +55,7 @@ public class CodeController extends Controller {
     @Security.Authenticated(JWTSecured.class)
     public CompletionStage<Result> scanCode() throws AMException {
         Form<CodeRequest> formData = formFactory.form(CodeRequest.class)
-                                                .bind(FormHelper.requestDataCamelCase(request())
-                                                        , CodeRequest.ALLOWED_FIELDS);
+                                                .bind(FormHelper.requestDataCamelCase(request()));
         if (formData.hasErrors()) {
             return CompletableFuture.completedFuture(
                     badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
@@ -235,8 +234,7 @@ public class CodeController extends Controller {
     @Security.Authenticated(JWTSecured.class)
     public CompletionStage<Result> scanCodeV2() throws AMException {
         Form<CodeRequest> formData = formFactory.form(CodeRequest.class)
-                                                .bind(FormHelper.requestDataCamelCase(request())
-                                                        , CodeRequest.ALLOWED_FIELDS);
+                                                .bind(FormHelper.requestDataCamelCase(request()));
         if (formData.hasErrors()) {
             return CompletableFuture.completedFuture(
                     badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,

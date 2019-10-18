@@ -6,7 +6,7 @@ import play.data.validation.Constraints;
 import javax.validation.Constraint;
 
 public class CodeRequest {
-    public static final String[] ALLOWED_FIELDS = {"code", "type", "svc"};
+    //public static final String[] ALLOWED_FIELDS = {"code", "type", "svc"};
 
     public static final String SVC_TAG = "svc";
 
