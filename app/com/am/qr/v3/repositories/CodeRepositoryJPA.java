@@ -92,8 +92,8 @@ public class CodeRepositoryJPA implements CodeRepository {
     }
 
     @Override
-    public boolean importHashes(String svc, List<String> hashes) {
-        String insertSql = "insert into route (svc, hash_value) values (:svc, UNHEX(:hashValue))";
+    public boolean importHashes(String svc, List<String> hashes, String status) {
+        String insertSql = "insert into route (svc, hash_value, status) values (:svc, UNHEX(:hashValue), :status)";
         //String updateSql = "update route set svc = concat(svc,',',:svc) where hash_value = UNHEX(:hashValue)";
         //String combineSql = "insert into route (svc, hash_value) values (:svc, UNHEX(:hashValue)) " +
         //                    "on duplicate key update svc=concat(svc,',',:svc)";
@@ -111,6 +111,7 @@ public class CodeRepositoryJPA implements CodeRepository {
                     em.createNativeQuery(insertSql)
                       .setParameter("svc", svc)
                       .setParameter("hashValue", hash)
+                      .setParameter("status", status)
                       .executeUpdate();
                 }
             } catch (Exception e) {

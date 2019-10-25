@@ -6,13 +6,15 @@ import java.util.List;
 
 public class ImportHashRequest {
 
-    public static final String[] ALLOWED_FIELDS = {"hashes", "svc"};
+    public static final String[] ALLOWED_FIELDS = {"hashes", "svc", "status"};
 
     @Constraints.Required(message = "hashes is required.")
     private List<String> hashes;
 
     @Constraints.Required(message = "svc is required.")
     private String svc;
+
+    private String status;
 
     public List<String> getHashes() {
         return hashes;
@@ -28,5 +30,13 @@ public class ImportHashRequest {
 
     public void setSvc(String svc) {
         this.svc = svc;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

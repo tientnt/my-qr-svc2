@@ -17,14 +17,17 @@ import play.data.Form;
 import play.data.FormFactory;
 import play.libs.Json;
 import play.libs.ws.WSClient;
+import play.libs.ws.WSResponse;
 import play.mvc.Controller;
 import play.mvc.Result;
+import play.mvc.Results;
 import play.mvc.Security;
 
 import javax.inject.Inject;
+import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class CodeController extends Controller {
     private static final Logger.ALogger logger = Logger.of(CodeController.class);
@@ -77,16 +80,16 @@ public class CodeController extends Controller {
     @Security.Authenticated(JWTSecured.class)
     public CompletionStage<Result> codesValidateNoSvc() {
         String endpoint = config.getString("app.evoucher_codes_validate_url");
-        return processCodesNoSvc(endpoint);
+        return processCodesNoSvc(endpoint, Constants.ProcessCodeType.VALIDATE);
     }
 
     @Security.Authenticated(JWTSecured.class)
     public CompletionStage<Result> codesRedeemNoSvc() {
         String endpoint = config.getString("app.evoucher_codes_redeem_url");
-        return processCodesNoSvc(endpoint);
+        return processCodesNoSvc(endpoint, Constants.ProcessCodeType.REDEEM);
     }
 
-    private CompletionStage<Result> processCodesNoSvc(String endpoint) {
+    private CompletionStage<Result> processCodesNoSvc(String endpoint, Constants.ProcessCodeType type) {
         JsonNode requestAsJson = request().body().asJson();
         String codes = requestAsJson.get("code").asText();
         if (StringUtils.isEmpty(codes)) {
@@ -102,6 +105,44 @@ public class CodeController extends Controller {
         List<String> invalidCodeList = new ArrayList<>();
         String svcStr = null;
         String error = null;
+        String hpbServiceType = detectHPBService(codeList.get(0));
+        if (StringUtils.isNotEmpty(hpbServiceType)) {
+            if (codeList.size() > 1) {
+                logger.error("More than 1 code in one request {}: service: {}", codes, hpbServiceType);
+                Map<String, String> responseData = new HashMap<>();
+                error = Constants.INVALID_VOUCHER + ": " + StringUtils.join(invalidCodeList, ",");
+                responseData.put("status", Constants.INVALID_VOUCHER);
+                responseData.put("message", error);
+                return CompletableFuture.completedFuture(
+                        badRequest(Json.toJson(new Response(HttpStatus.SC_OK,
+                                                            error,
+                                                            responseData,
+                                                            null))));
+            }
+            Route route = codeService.findByCode(codeList.get(0));
+            if (null != route
+                && null != route.getStatus()
+                && route.getStatus().equals(Constants.QrStatus.USED.getValue())) {
+                logger.error("Code has been used {}: service: {}", codes, hpbServiceType);
+                Map<String, String> responseData = new HashMap<>();
+                error = Constants.INVALID_VOUCHER_USED + ": " + codes;
+                responseData.put("status", Constants.INVALID_VOUCHER_USED);
+                responseData.put("message", error);
+                return CompletableFuture.completedFuture(
+                        badRequest(Json.toJson(new Response(HttpStatus.SC_OK,
+                                                            error,
+                                                            responseData,
+                                                            null))));
+            }
+            String requestToken = request().header(Constants.AUTH_TOKEN_HEADER).orElse(null);
+            if (Constants.ProcessCodeType.VALIDATE == type) {
+                String hpbEndpoint = config.getString("hpb.code_validate_url");
+                return proceedToNextService(hpbEndpoint, requestAsJson, requestToken);
+            } else if (Constants.ProcessCodeType.REDEEM == type) {
+                String hpbEndpoint = config.getString("hpb.code_redeem_url");
+                return proceedToNextService(hpbEndpoint, requestAsJson, requestToken);
+            }
+        }
         for (String code : codeList) {
             Route route = codeService.findByCode(code);
             if (route == null) {
@@ -175,6 +216,26 @@ public class CodeController extends Controller {
         }
     }
 
+    /**
+     * Using for HPB detection
+     *
+     * @param code
+     * @return NULL if no any format matching with code
+     */
+    private String detectHPBService(String code) {
+        String prefix = config.getString("hpb.prefix");
+        int length = config.getInt("hpb.length");
+
+        if (code.length() == length) {
+            List<String> prefixList = Arrays.stream(prefix.split(",")).map(s -> s.trim()).collect(Collectors.toList());
+            boolean isCodeStartWithPrefix = prefixList.stream().anyMatch(code::startsWith);
+            if (isCodeStartWithPrefix) {
+                return Constants.HPB_SERVICE;
+            }
+        }
+        return "";
+    }
+
     private CompletionStage<Result> processCode(Service svc, JsonNode requestBody, String requestToken) {
         String nextUrl;
         switch (svc) {
@@ -210,7 +271,7 @@ public class CodeController extends Controller {
         ImportHashRequest data = Json.fromJson(request().body().asJson(), ImportHashRequest.class);
 
         return CompletableFuture.supplyAsync(() -> {
-            boolean result = codeService.importHashes(data.getSvc(), data.getHashes());
+            boolean result = codeService.importHashes(data.getSvc(), data.getHashes(), data.getStatus());
             if (result) {
                 return Response.success("import hashes success", null);
             }
