@@ -35,6 +35,9 @@ public class Route {
     @Type(type = "com.am.common.hibernate.MySQLBinaryType")
     private byte[] hashValue;
 
+    @Column(name = "status", length = 50, columnDefinition = "varchar")
+    private String status;
+
     @Column(name = "updated_at")
     @UpdateTimestamp
     private java.sql.Timestamp updatedAt;

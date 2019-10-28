@@ -12,8 +12,8 @@ public class CodeServiceImpl implements CodeService {
     CodeRepository codeRepository;
 
     @Override
-    public boolean importHashes(String svc, List<String> codes) {
-        return codeRepository.importHashes(svc, codes);
+    public boolean importHashes(String svc, List<String> codes, String status) {
+        return codeRepository.importHashes(svc, codes, status);
     }
 
     @Override

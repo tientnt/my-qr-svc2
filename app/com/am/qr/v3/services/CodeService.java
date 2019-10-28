@@ -7,7 +7,7 @@ import java.util.List;
 
 @ImplementedBy(CodeServiceImpl.class)
 public interface CodeService {
-    boolean importHashes(String svc, List<String> codes);
+    boolean importHashes(String svc, List<String> codes, String status);
 
     String findServiceByCode(String code);
 
