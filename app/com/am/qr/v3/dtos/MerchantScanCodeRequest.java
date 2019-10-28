@@ -1,25 +1,15 @@
 package com.am.qr.v3.dtos;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import play.data.validation.Constraints;
 
-import javax.validation.Constraint;
-
-public class CodeRequest {
-    public static final String[] ALLOWED_FIELDS = {"code", "type", "svc", "data"};
-
-    public static final String SVC_TAG = "svc";
-
-    @Constraints.Required(message = "code is required.")
+public class MerchantScanCodeRequest {
     private String code;
 
-    @Constraints.Required(message = "type is required.")
     private String type;
 
-    @Constraints.Required(message = "svc is required.")
     private String svc;
 
-    private JsonNode data;
+    private MerchantScanCodeDetails data;
 
     public String getCode() {
         return code;
@@ -45,11 +35,11 @@ public class CodeRequest {
         this.svc = svc;
     }
 
-    public JsonNode getData() {
+    public MerchantScanCodeDetails getData() {
         return data;
     }
 
-    public void setData(JsonNode data) {
+    public void setData(MerchantScanCodeDetails data) {
         this.data = data;
     }
 }

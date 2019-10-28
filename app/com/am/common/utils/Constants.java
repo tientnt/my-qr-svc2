@@ -31,6 +31,8 @@ public final class Constants {
 
     public final static String HPB_SERVICE = "hpb";
 
+    public final static String ULIVE_SERVICE = "ulive";
+
     public enum QrStatus {
         NEW("new"),
         USED("used");

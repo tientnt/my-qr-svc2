@@ -3,9 +3,8 @@ package com.am.qr.v3.controllers;
 import com.am.common.exception.AMException;
 import com.am.common.services.DbService;
 import com.am.common.utils.*;
-import com.am.qr.v3.dtos.CodeRequest;
-import com.am.qr.v3.dtos.ImportHashRequest;
-import com.am.qr.v3.dtos.ValidateNewCodeRequest;
+import com.am.common.utils.Response;
+import com.am.qr.v3.dtos.*;
 import com.am.qr.v3.models.Route;
 import com.am.qr.v3.services.CodeService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,6 +24,10 @@ import play.mvc.Security;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -42,6 +45,14 @@ public class CodeController extends Controller {
 
     private DbService dbService;
 
+    private static final String HTTP = "http";
+
+    private static final String APP_DOT_LINK = "app.link";
+
+    private static final String AMPERSAND = "&";
+
+    private static final String CODE_QUERY_PARAM = "c=";
+
     @Inject
     public CodeController(FormFactory formFactory,
                           WSClient wsClient,
@@ -58,7 +69,8 @@ public class CodeController extends Controller {
     @Security.Authenticated(JWTSecured.class)
     public CompletionStage<Result> scanCode() throws AMException {
         Form<CodeRequest> formData = formFactory.form(CodeRequest.class)
-                                                .bind(FormHelper.requestDataCamelCase(request()));
+                                                .bind(FormHelper.requestDataCamelCase(request()),
+                                                      CodeRequest.ALLOWED_FIELDS);
         if (formData.hasErrors()) {
             return CompletableFuture.completedFuture(
                     badRequest(Json.toJson(new Response(HttpStatus.SC_BAD_REQUEST,
@@ -74,6 +86,12 @@ public class CodeController extends Controller {
 
         String requestToken = request().header(Constants.AUTH_TOKEN_HEADER).orElse(null);
         Service requestService = Service.fromServiceName(serviceAsString);
+
+        String uLiveCustomCode = detectULiveService(requestAsJson);
+        if (StringUtils.isNotEmpty(uLiveCustomCode)) {
+            return processUliveCode(uLiveCustomCode, requestService, requestAsJson, requestToken);
+        }
+
         return processCode(requestService, requestAsJson, requestToken);
     }
 
@@ -223,17 +241,67 @@ public class CodeController extends Controller {
      * @return NULL if no any format matching with code
      */
     private String detectHPBService(String code) {
-        String prefix = config.getString("hpb.prefix");
-        int length = config.getInt("hpb.length");
+        try {
+            String prefix = config.getString("hpb.prefix");
+            int length = config.getInt("hpb.length");
 
-        if (code.length() == length) {
-            List<String> prefixList = Arrays.stream(prefix.split(",")).map(s -> s.trim()).collect(Collectors.toList());
-            boolean isCodeStartWithPrefix = prefixList.stream().anyMatch(code::startsWith);
-            if (isCodeStartWithPrefix) {
-                return Constants.HPB_SERVICE;
+            if (code.length() == length) {
+                List<String> prefixList = Arrays.stream(prefix.split(","))
+                                                .map(s -> s.trim())
+                                                .collect(Collectors.toList());
+                boolean isCodeStartWithPrefix = prefixList.stream().anyMatch(code::startsWith);
+                if (isCodeStartWithPrefix) {
+                    return Constants.HPB_SERVICE;
+                }
             }
+        } catch (Exception ex) {
+            logger.error("Cannot detectHPBService. Error: {}", ex.getMessage());
         }
         return "";
+    }
+
+    private String detectULiveService(JsonNode jsonBody) {
+        try {
+            MerchantScanCodeRequest request = AMObjectMapper.toObject(jsonBody, MerchantScanCodeRequest.class, true);
+            if (null == request || null == request.getData()) {
+                logger.error("detectULiveService error. Cannot map to merchant scan code request");
+                return "";
+            }
+            String listCodes = config.getString("ulive.custom_outlet_codes");
+            String code = request.getData().getCustomOutletCode();
+
+            List<String> matchList = Arrays.stream(listCodes.split(","))
+                                           .map(s -> s.trim())
+                                           .collect(Collectors.toList());
+            boolean isMatched = matchList.stream().anyMatch(code::equalsIgnoreCase);
+            if (isMatched) {
+                return code;
+            }
+        } catch (Exception ex) {
+            logger.error("Cannot detectULiveService. Error: {}", ex.getMessage());
+        }
+        return "";
+    }
+
+    public String extractOnlyVoucherCode(String linkWithCode) {
+        if (linkWithCode.contains(HTTP) || linkWithCode.contains(APP_DOT_LINK)) {
+            int cIndex = linkWithCode.indexOf(CODE_QUERY_PARAM);
+            if (cIndex == -1) {
+                logger.error("Unable to locate voucher code from URL {}", linkWithCode);
+                return linkWithCode;
+            }
+            int ampersandIndex = linkWithCode.indexOf(AMPERSAND, cIndex);
+
+            if (ampersandIndex == -1) {
+                ampersandIndex = linkWithCode.length();
+            }
+            String code = linkWithCode.substring(cIndex + CODE_QUERY_PARAM.length(), ampersandIndex);
+            logger.debug("Extracted code {} from link {}", code, linkWithCode);
+            return code;
+        } else {
+            logger.debug("Code {} is not a link", linkWithCode);
+            return linkWithCode;
+        }
     }
 
     private CompletionStage<Result> processCode(Service svc, JsonNode requestBody, String requestToken) {
@@ -254,6 +322,66 @@ public class CodeController extends Controller {
                                                             Constants.INVALID_SVC_TYPE,
                                                             null,
                                                             null))));
+        }
+    }
+
+    private CompletionStage<Result> processUliveCode(String uLiveCustomCode,
+                                                     Service svc,
+                                                     JsonNode requestBody,
+                                                     String requestToken) {
+        String nextMerchantUrl = config.getString("app.evoucher_merchant_url");
+        String linkWithCode = requestBody.get("code").asText();
+        String code = extractOnlyVoucherCode(linkWithCode);
+        Route route = codeService.findByCodeAndSvc(code, svc.getServiceName());
+        if (null == route) {
+            logger.info("Start minting ULive vouchers");
+            String nextMintUrl = config.getString("app.evoucher_merchant_mint_url");
+            MerchantMintVoucherRequest request = new MerchantMintVoucherRequest();
+            request.setQrCode(code);
+            int ntucCodeLength = config.getInt("ulive.ntuc_code_length");
+            String merchantQrType = "Public";
+            if (ntucCodeLength == code.length()) {
+                merchantQrType = "NTUC";
+            }
+
+            String zoneId = config.getString("app.app_time_zone_id");
+            DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+            DateTimeFormatter logDateFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+            ZoneId localZoneId = ZoneId.of(zoneId);
+            LocalDateTime now = LocalDateTime.now();
+            ZonedDateTime zoneNow = now.atZone(localZoneId);
+            String dateFormatted = zoneNow.format(dateFormat);
+            String merchantVoucherType = Constants.ULIVE_SERVICE + "." + merchantQrType + "." + dateFormatted;
+            logger.debug("ULive merchant mint voucher with local zone date {}", zoneNow.format(logDateFormat));
+            request.setMerchantVoucherType(merchantVoucherType);
+            JsonNode requestMintAsJson = AMObjectMapper.toJsonNode(request, true);
+            return wsClient.url(nextMintUrl)
+                           .setContentType(Constants.CONTENT_TYPE)
+                           .addHeader(Constants.AUTH_TOKEN_HEADER, requestToken)
+                           .post(requestMintAsJson)
+                           .thenApply(wsResponse -> {
+                               logger.info("ULive mint response: \n {}", wsResponse.getBody());
+                               if (HttpStatus.SC_OK == wsResponse.getStatus()) { //mint successful
+                                   //Import hashes
+                                   codeService.importHashes(svc.getServiceName(), Arrays.asList(code), "");
+                                   try {
+                                       return proceedToNextService(nextMerchantUrl,
+                                                                   requestBody,
+                                                                   requestToken).toCompletableFuture()
+                                                                                .get(60, TimeUnit.SECONDS);
+                                   } catch (Exception e) {
+                                       logger.error(
+                                               "Cannot process merchant scan code after minting successfully, error: {}",
+                                               e.getMessage());
+                                   }
+                               }
+                               logger.error("Merchant minted failed. Please check!!!");
+                               // mint failed; please check
+                               return status(wsResponse.getStatus(), wsResponse.getBody()).as(Constants.CONTENT_TYPE);
+                           });
+
+        } else { // import to QR & Minted already
+            return proceedToNextService(nextMerchantUrl, requestBody, requestToken);
         }
     }
 
