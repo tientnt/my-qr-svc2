@@ -62,4 +62,19 @@ public final class Constants {
             return value;
         }
     }
+
+    public enum ULiveCodeType {
+        NTUC("NTUC"),
+        PUBLIC("Public");
+
+        private final String value;
+
+        ULiveCodeType(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+    }
 }

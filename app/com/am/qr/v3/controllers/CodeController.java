@@ -25,6 +25,8 @@ import play.mvc.Security;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -338,9 +340,17 @@ public class CodeController extends Controller {
         String code = extractOnlyVoucherCode(linkWithCode);
 
         int ntucCodeLength = config.getInt("ulive.ntuc_code_length");
-        String merchantQrType = "Public";
+        int publicCodeLength = config.getInt("ulive.public_code_length");
+        String merchantQrType = null;
         if (ntucCodeLength == code.length()) {
-            merchantQrType = "NTUC";
+            merchantQrType = Constants.ULiveCodeType.NTUC.getValue();
+        } else if (publicCodeLength == code.length()) {
+            merchantQrType = Constants.ULiveCodeType.PUBLIC.getValue();
+        }
+        if (StringUtils.isEmpty(merchantQrType)) {
+            logger.warn("Detect ULive for customer_outlet_code {} but scanned code {} not matching with NTUC/Public",
+                        uLiveCustomCode, code);
+            return proceedToNextService(nextMerchantUrl, requestBody, requestToken);
         }
 
         String zoneId = config.getString("app.app_time_zone_id");
@@ -348,10 +358,13 @@ public class CodeController extends Controller {
         DateTimeFormatter logDateFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
         ZoneId localZoneId = ZoneId.of(zoneId);
         LocalDateTime now = LocalDateTime.now();
-        ZonedDateTime zoneNow = now.atZone(localZoneId);
-        String dateFormatted = zoneNow.format(dateFormat);
+        Timestamp tsNow = Timestamp.valueOf(now);
+        Instant instantTime = tsNow.toInstant();
+        ZonedDateTime sporeTime = instantTime.atZone(localZoneId);
+
+        String dateFormatted = sporeTime.format(dateFormat);
         String merchantVoucherType = Constants.ULIVE_SERVICE + "." + merchantQrType + "." + dateFormatted;
-        logger.debug("ULive merchant mint voucher with local zone date {}", zoneNow.format(logDateFormat));
+        logger.debug("ULive merchant mint voucher with local zone date {}", sporeTime.format(logDateFormat));
 
         Route route = codeService.findByCodeSvcGroup(code, svc.getServiceName(), merchantVoucherType);
         if (null == route) {
