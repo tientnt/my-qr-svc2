@@ -5,6 +5,8 @@ public class MerchantMintVoucherRequest {
 
     private String qrCode;
 
+    private String customCode;
+
     public String getMerchantVoucherType() {
         return merchantVoucherType;
     }
@@ -19,5 +21,13 @@ public class MerchantMintVoucherRequest {
 
     public void setQrCode(String qrCode) {
         this.qrCode = qrCode;
+    }
+
+    public String getCustomCode() {
+        return customCode;
+    }
+
+    public void setCustomCode(String customCode) {
+        this.customCode = customCode;
     }
 }

@@ -9,6 +9,7 @@ import com.am.qr.v3.models.Route;
 import com.am.qr.v3.services.CodeService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.typesafe.config.Config;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import play.Logger;
@@ -332,28 +333,32 @@ public class CodeController extends Controller {
         String nextMerchantUrl = config.getString("app.evoucher_merchant_url");
         String linkWithCode = requestBody.get("code").asText();
         String code = extractOnlyVoucherCode(linkWithCode);
-        Route route = codeService.findByCodeAndSvc(code, svc.getServiceName());
+
+        int ntucCodeLength = config.getInt("ulive.ntuc_code_length");
+        String merchantQrType = "Public";
+        if (ntucCodeLength == code.length()) {
+            merchantQrType = "NTUC";
+        }
+
+        String zoneId = config.getString("app.app_time_zone_id");
+        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        DateTimeFormatter logDateFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+        ZoneId localZoneId = ZoneId.of(zoneId);
+        LocalDateTime now = LocalDateTime.now();
+        ZonedDateTime zoneNow = now.atZone(localZoneId);
+        String dateFormatted = zoneNow.format(dateFormat);
+        String merchantVoucherType = Constants.ULIVE_SERVICE + "." + merchantQrType + "." + dateFormatted;
+        logger.debug("ULive merchant mint voucher with local zone date {}", zoneNow.format(logDateFormat));
+
+        Route route = codeService.findByCodeSvcGroup(code, svc.getServiceName(), merchantVoucherType);
         if (null == route) {
             logger.info("Start minting ULive vouchers");
             String nextMintUrl = config.getString("app.evoucher_merchant_mint_url");
             MerchantMintVoucherRequest request = new MerchantMintVoucherRequest();
             request.setQrCode(code);
-            int ntucCodeLength = config.getInt("ulive.ntuc_code_length");
-            String merchantQrType = "Public";
-            if (ntucCodeLength == code.length()) {
-                merchantQrType = "NTUC";
-            }
 
-            String zoneId = config.getString("app.app_time_zone_id");
-            DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-            DateTimeFormatter logDateFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-            ZoneId localZoneId = ZoneId.of(zoneId);
-            LocalDateTime now = LocalDateTime.now();
-            ZonedDateTime zoneNow = now.atZone(localZoneId);
-            String dateFormatted = zoneNow.format(dateFormat);
-            String merchantVoucherType = Constants.ULIVE_SERVICE + "." + merchantQrType + "." + dateFormatted;
-            logger.debug("ULive merchant mint voucher with local zone date {}", zoneNow.format(logDateFormat));
             request.setMerchantVoucherType(merchantVoucherType);
+            request.setCustomCode(uLiveCustomCode);
             JsonNode requestMintAsJson = AMObjectMapper.toJsonNode(request, true);
             return wsClient.url(nextMintUrl)
                            .setContentType(Constants.CONTENT_TYPE)
@@ -362,8 +367,7 @@ public class CodeController extends Controller {
                            .thenApply(wsResponse -> {
                                logger.info("ULive mint response: \n {}", wsResponse.getBody());
                                if (HttpStatus.SC_OK == wsResponse.getStatus()) { //mint successful
-                                   //Import hashes
-                                   codeService.importHashes(svc.getServiceName(), Arrays.asList(code), "");
+                                   //no need to import hash (scheduler job will import it)
                                    try {
                                        return proceedToNextService(nextMerchantUrl,
                                                                    requestBody,
@@ -399,7 +403,10 @@ public class CodeController extends Controller {
         ImportHashRequest data = Json.fromJson(request().body().asJson(), ImportHashRequest.class);
 
         return CompletableFuture.supplyAsync(() -> {
-            boolean result = codeService.importHashes(data.getSvc(), data.getHashes(), data.getStatus());
+            boolean result = codeService.importHashes(data.getSvc(),
+                                                      data.getHashes(),
+                                                      data.getStatus(),
+                                                      data.getGroups());
             if (result) {
                 return Response.success("import hashes success", null);
             }

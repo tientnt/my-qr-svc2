@@ -6,7 +6,7 @@ import java.util.List;
 
 public class ImportHashRequest {
 
-    public static final String[] ALLOWED_FIELDS = {"hashes", "svc", "status"};
+    public static final String[] ALLOWED_FIELDS = {"hashes", "svc", "status", "groups"};
 
     @Constraints.Required(message = "hashes is required.")
     private List<String> hashes;
@@ -15,6 +15,8 @@ public class ImportHashRequest {
     private String svc;
 
     private String status;
+
+    private List<String> groups;
 
     public List<String> getHashes() {
         return hashes;
@@ -38,5 +40,13 @@ public class ImportHashRequest {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public List<String> getGroups() {
+        return groups;
+    }
+
+    public void setGroups(List<String> groups) {
+        this.groups = groups;
     }
 }
