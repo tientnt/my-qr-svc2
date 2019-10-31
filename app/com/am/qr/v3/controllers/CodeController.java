@@ -83,14 +83,17 @@ public class CodeController extends Controller {
 
         JsonNode requestAsJson = request().body().asJson();
         String serviceAsString = requestAsJson.get(CodeRequest.SVC_TAG).asText();
+        String typeAsString = requestAsJson.get(CodeRequest.TYPE_TAG).asText();
         logger.debug("Request as JsonNode: \n{}", AMObjectMapper.toPrettyJsonString(requestAsJson));
 
         String requestToken = request().header(Constants.AUTH_TOKEN_HEADER).orElse(null);
         Service requestService = Service.fromServiceName(serviceAsString);
 
-        String uLiveCustomCode = detectULiveService(requestAsJson);
-        if (StringUtils.isNotEmpty(uLiveCustomCode)) {
-            return processUliveCode(uLiveCustomCode, requestService, requestAsJson, requestToken);
+        if (Constants.ProcessCodeType.VALIDATE.getValue().equals(typeAsString)) {
+            String uLiveCustomCode = detectULiveService(requestAsJson);
+            if (StringUtils.isNotEmpty(uLiveCustomCode)) {
+                return processUliveCode(uLiveCustomCode, requestService, requestAsJson, requestToken);
+            }
         }
 
         return processCode(requestService, requestAsJson, requestToken);

@@ -10,6 +10,8 @@ public class CodeRequest {
 
     public static final String SVC_TAG = "svc";
 
+    public static final String TYPE_TAG = "type";
+
     @Constraints.Required(message = "code is required.")
     private String code;
 
