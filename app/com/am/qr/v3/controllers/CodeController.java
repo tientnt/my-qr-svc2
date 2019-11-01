@@ -91,7 +91,8 @@ public class CodeController extends Controller {
         String requestToken = request().header(Constants.AUTH_TOKEN_HEADER).orElse(null);
         Service requestService = Service.fromServiceName(serviceAsString);
 
-        if (Constants.ProcessCodeType.VALIDATE.getValue().equals(typeAsString)) {
+        if (Constants.ProcessCodeType.VALIDATE.getValue().equals(typeAsString)
+            && requestService == Service.EVOUCHER) {
             String uLiveCustomCode = detectULiveService(requestAsJson);
             if (StringUtils.isNotEmpty(uLiveCustomCode)) {
                 return processUliveCode(uLiveCustomCode, requestService, requestAsJson, requestToken);
@@ -270,7 +271,7 @@ public class CodeController extends Controller {
         try {
             MerchantScanCodeRequest request = AMObjectMapper.toObject(jsonBody, MerchantScanCodeRequest.class, true);
             if (null == request || null == request.getData()) {
-                logger.error("detectULiveService error. Cannot map to merchant scan code request");
+                logger.warn("No merchant detail data. Cannot map to merchant scan code request");
                 return "";
             }
             String listCodes = config.getString("ulive.custom_outlet_codes");
@@ -350,7 +351,7 @@ public class CodeController extends Controller {
         if (StringUtils.isEmpty(merchantQrType)) {
             logger.warn("Detect ULive for customer_outlet_code {} but scanned code {} not matching with NTUC/Public",
                         uLiveCustomCode, code);
-            return proceedToNextService(nextMerchantUrl, requestBody, requestToken);
+            return processCode(svc, requestBody, requestToken);
         }
 
         String zoneId = config.getString("app.app_time_zone_id");
