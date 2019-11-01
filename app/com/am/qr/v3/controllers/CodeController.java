@@ -384,7 +384,20 @@ public class CodeController extends Controller {
                            .thenApply(wsResponse -> {
                                logger.info("ULive mint response: \n {}", wsResponse.getBody());
                                if (HttpStatus.SC_OK == wsResponse.getStatus()) { //mint successful
-                                   //no need to import hash (scheduler job will import it)
+                                   Route preRoute = codeService.findByCodeAndSvc(code, svc.getServiceName());
+                                   if (StringUtils.isEmpty(preRoute.getGroup()) ||
+                                       !merchantVoucherType.equals(preRoute.getGroup())) {
+                                       logger.info("ULive manual import hash for QR {} and Group {}",
+                                                   code,
+                                                   merchantVoucherType);
+                                       String hashCode = DigestUtils.sha256Hex(code);
+                                       List<String> hashList = Arrays.asList(hashCode);
+                                       List<String> groupList = Arrays.asList(merchantVoucherType);
+                                       codeService.importHashes(svc.getServiceName(),
+                                                                hashList,
+                                                                null,
+                                                                groupList);
+                                   }
                                    try {
                                        return proceedToNextService(nextMerchantUrl,
                                                                    requestBody,
