@@ -385,8 +385,8 @@ public class CodeController extends Controller {
                                logger.info("ULive mint response: \n {}", wsResponse.getBody());
                                if (HttpStatus.SC_OK == wsResponse.getStatus()) { //mint successful
                                    Route preRoute = codeService.findByCodeAndSvc(code, svc.getServiceName());
-                                   if (StringUtils.isEmpty(preRoute.getGroup()) ||
-                                       !merchantVoucherType.equals(preRoute.getGroup())) {
+                                   if (preRoute != null && (StringUtils.isEmpty(preRoute.getGroup()) ||
+                                                            !merchantVoucherType.equals(preRoute.getGroup()))) {
                                        logger.info("ULive manual import hash for QR {} and Group {}",
                                                    code,
                                                    merchantVoucherType);
