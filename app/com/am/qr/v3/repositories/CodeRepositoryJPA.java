@@ -90,7 +90,7 @@ public class CodeRepositoryJPA implements CodeRepository {
     @Override
     public Route findByCodeAndSvc(String code, String svc) {
         return jpaApi.withTransaction(em -> {
-            String sql1 = "from Route where svc = :svc and hash_value = UNHEX(sha2(:code,256))";
+            String sql1 = "from Route where svc = :svc and hash_value = UNHEX(sha2(:code,256)) order by id desc";
             List<Route> routes = em.createQuery(sql1, Route.class)
                                    .setParameter("svc", svc)
                                    .setParameter("code", code)

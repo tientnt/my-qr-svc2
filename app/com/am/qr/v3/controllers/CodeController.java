@@ -93,7 +93,7 @@ public class CodeController extends Controller {
 
         if (Constants.ProcessCodeType.VALIDATE.getValue().equals(typeAsString)
             && requestService == Service.EVOUCHER) {
-            String uLiveCustomCode = detectULiveService(requestAsJson);
+            String uLiveCustomCode = detectULiveService(requestAsJson, requestService);
             if (StringUtils.isNotEmpty(uLiveCustomCode)) {
                 return processUliveCode(uLiveCustomCode, requestService, requestAsJson, requestToken);
             }
@@ -267,7 +267,7 @@ public class CodeController extends Controller {
         return "";
     }
 
-    private String detectULiveService(JsonNode jsonBody) {
+    private String detectULiveService(JsonNode jsonBody, Service svc) {
         try {
             MerchantScanCodeRequest request = AMObjectMapper.toObject(jsonBody, MerchantScanCodeRequest.class, true);
             if (null == request || null == request.getData()) {
@@ -282,8 +282,18 @@ public class CodeController extends Controller {
                                            .collect(Collectors.toList());
             boolean isMatched = matchList.stream().anyMatch(code::equalsIgnoreCase);
             if (isMatched) {
-                return code;
+                return Constants.ULIVE_SERVICE;
             }
+
+            //new logic, detect by current group
+            String linkWithCode = jsonBody.get("code").asText();
+            String originalCode = extractOnlyVoucherCode(linkWithCode);
+            Route preRoute = codeService.findByCodeAndSvc(originalCode, svc.getServiceName());
+            if (preRoute != null && StringUtils.isNotEmpty(preRoute.getGroup()) &&
+                preRoute.getGroup().startsWith(Constants.ULIVE_SERVICE)) {
+                return Constants.ULIVE_SERVICE;
+            }
+
         } catch (Exception ex) {
             logger.error("Cannot detectULiveService. Error: {}", ex.getMessage());
         }
@@ -349,8 +359,7 @@ public class CodeController extends Controller {
             merchantQrType = Constants.ULiveCodeType.PUBLIC.getValue();
         }
         if (StringUtils.isEmpty(merchantQrType)) {
-            logger.warn("Detect ULive for customer_outlet_code {} but scanned code {} not matching with NTUC/Public",
-                        uLiveCustomCode, code);
+            logger.warn("Detect ULive but scanned code {} not matching with NTUC/Public", code);
             return processCode(svc, requestBody, requestToken);
         }
 
@@ -365,7 +374,7 @@ public class CodeController extends Controller {
 
         String dateFormatted = sporeTime.format(dateFormat);
         String merchantVoucherType = Constants.ULIVE_SERVICE + "." + merchantQrType + "." + dateFormatted;
-        logger.debug("ULive merchant mint voucher with local zone date {}", sporeTime.format(logDateFormat));
+        logger.debug("ULive merchant check voucher group with local zone date {}", sporeTime.format(logDateFormat));
 
         Route route = codeService.findByCodeSvcGroup(code, svc.getServiceName(), merchantVoucherType);
         if (null == route) {
