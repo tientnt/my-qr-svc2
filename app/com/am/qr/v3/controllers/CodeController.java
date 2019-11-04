@@ -286,13 +286,13 @@ public class CodeController extends Controller {
             }
 
             //new logic, detect by current group
-            String linkWithCode = jsonBody.get("code").asText();
-            String originalCode = extractOnlyVoucherCode(linkWithCode);
-            Route preRoute = codeService.findByCodeAndSvc(originalCode, svc.getServiceName());
-            if (preRoute != null && StringUtils.isNotEmpty(preRoute.getGroup()) &&
-                preRoute.getGroup().startsWith(Constants.ULIVE_SERVICE)) {
-                return Constants.ULIVE_SERVICE;
-            }
+            //            String linkWithCode = jsonBody.get("code").asText();
+            //            String originalCode = extractOnlyVoucherCode(linkWithCode);
+            //            Route preRoute = codeService.findByCodeAndSvc(originalCode, svc.getServiceName());
+            //            if (preRoute != null && StringUtils.isNotEmpty(preRoute.getGroup()) &&
+            //                preRoute.getGroup().startsWith(Constants.ULIVE_SERVICE)) {
+            //                return Constants.ULIVE_SERVICE;
+            //            }
 
         } catch (Exception ex) {
             logger.error("Cannot detectULiveService. Error: {}", ex.getMessage());
