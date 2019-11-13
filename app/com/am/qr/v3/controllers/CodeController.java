@@ -269,22 +269,28 @@ public class CodeController extends Controller {
 
     private String detectULiveService(JsonNode jsonBody, Service svc) {
         try {
-            MerchantScanCodeRequest request = AMObjectMapper.toObject(jsonBody, MerchantScanCodeRequest.class, true);
-            if (null == request || null == request.getData()) {
-                logger.warn("No merchant detail data. Cannot map to merchant scan code request");
-                return "";
-            }
-            String listCodes = config.getString("ulive.custom_outlet_codes");
-            String code = request.getData().getCustomOutletCode();
+            if (config.hasPath("ulive.custom_outlet_codes")) {
+                String listCodes = config.getString("ulive.custom_outlet_codes");
+                if (StringUtils.isEmpty(listCodes)) {
+                    return "";
+                }
+                MerchantScanCodeRequest request = AMObjectMapper.toObject(jsonBody,
+                                                                          MerchantScanCodeRequest.class,
+                                                                          true);
+                if (null == request || null == request.getData()) {
+                    logger.warn("No merchant detail data. Cannot map to merchant scan code request");
+                    return "";
+                }
+                String code = request.getData().getCustomOutletCode();
 
-            List<String> matchList = Arrays.stream(listCodes.split(","))
-                                           .map(s -> s.trim())
-                                           .collect(Collectors.toList());
-            boolean isMatched = matchList.stream().anyMatch(code::equalsIgnoreCase);
-            if (isMatched) {
-                return Constants.ULIVE_SERVICE;
+                List<String> matchList = Arrays.stream(listCodes.split(","))
+                                               .map(s -> s.trim())
+                                               .collect(Collectors.toList());
+                boolean isMatched = matchList.stream().anyMatch(code::equalsIgnoreCase);
+                if (isMatched) {
+                    return Constants.ULIVE_SERVICE;
+                }
             }
-
             //new logic, detect by current group
             //            String linkWithCode = jsonBody.get("code").asText();
             //            String originalCode = extractOnlyVoucherCode(linkWithCode);
@@ -350,13 +356,21 @@ public class CodeController extends Controller {
         String linkWithCode = requestBody.get("code").asText();
         String code = extractOnlyVoucherCode(linkWithCode);
 
-        int ntucCodeLength = config.getInt("ulive.ntuc_code_length");
-        int publicCodeLength = config.getInt("ulive.public_code_length");
+        List<Integer> ntucCodeLengths = config.getIntList("ulive.ntuc_code_length");
+        List<Integer> publicCodeLengths = config.getIntList("ulive.public_code_length");
+        List<Integer> ntucMapCodeLengths = config.getIntList("ulive.ntuc_mapping_code_length");
         String merchantQrType = null;
-        if (ntucCodeLength == code.length()) {
+        if (ntucCodeLengths.contains(code.length())) {
             merchantQrType = Constants.ULiveCodeType.NTUC.getValue();
-        } else if (publicCodeLength == code.length()) {
+        } else if (publicCodeLengths.contains(code.length())) {
             merchantQrType = Constants.ULiveCodeType.PUBLIC.getValue();
+        } else if (ntucMapCodeLengths.contains(code.length())) {
+            Route routeExisting = codeService.findByCodeAndSvc(code, svc.getServiceName());
+            if (null == routeExisting) {
+                logger.warn("Detect ULive but scanned code {} not existing in O3 (e.g. F3)", code);
+                return processCode(svc, requestBody, requestToken);
+            }
+            merchantQrType = Constants.ULiveCodeType.NTUC.getValue();
         }
         if (StringUtils.isEmpty(merchantQrType)) {
             logger.warn("Detect ULive but scanned code {} not matching with NTUC/Public", code);
