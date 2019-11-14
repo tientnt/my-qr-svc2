@@ -31,6 +31,8 @@ public final class Constants {
 
     public final static String HPB_SERVICE = "hpb";
 
+    public final static String ULIVE_SERVICE = "ulive";
+
     public enum QrStatus {
         NEW("new"),
         USED("used");
@@ -53,6 +55,21 @@ public final class Constants {
         private final String value;
 
         ProcessCodeType(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+    }
+
+    public enum ULiveCodeType {
+        NTUC("NTUC"),
+        PUBLIC("Public");
+
+        private final String value;
+
+        ULiveCodeType(String value) {
             this.value = value;
         }
 

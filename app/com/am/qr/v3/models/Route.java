@@ -38,6 +38,9 @@ public class Route {
     @Column(name = "status", length = 50, columnDefinition = "varchar")
     private String status;
 
+    @Column(name = "group", length = 100, columnDefinition = "varchar")
+    private String group;
+
     @Column(name = "updated_at")
     @UpdateTimestamp
     private java.sql.Timestamp updatedAt;

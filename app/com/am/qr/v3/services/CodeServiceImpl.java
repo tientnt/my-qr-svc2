@@ -12,8 +12,8 @@ public class CodeServiceImpl implements CodeService {
     CodeRepository codeRepository;
 
     @Override
-    public boolean importHashes(String svc, List<String> codes, String status) {
-        return codeRepository.importHashes(svc, codes, status);
+    public boolean importHashes(String svc, List<String> codes, String status, List<String> groups) {
+        return codeRepository.importHashes(svc, codes, status, groups);
     }
 
     @Override
@@ -34,5 +34,10 @@ public class CodeServiceImpl implements CodeService {
     @Override
     public Route findByCodeAndSvc(String code, String svc) {
         return codeRepository.findByCodeAndSvc(code, svc);
+    }
+
+    @Override
+    public Route findByCodeSvcGroup(String code, String svc, String group) {
+        return codeRepository.findByCodeSvcGroup(code, svc, group);
     }
 }
