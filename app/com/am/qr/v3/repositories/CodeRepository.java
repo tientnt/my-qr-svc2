@@ -10,9 +10,13 @@ public interface CodeRepository {
 
     String findServiceByCode(String code);
 
-    boolean importHashes(String svc, List<String> hashes);
+    boolean importHashes(String svc, List<String> hashes, String status, List<String> groups);
 
     Route findByCode(String code);
 
+    List<Route> findListByCode(String code);
+
     Route findByCodeAndSvc(String code, String svc);
+
+    Route findByCodeSvcGroup(String code, String svc, String group);
 }

@@ -86,7 +86,7 @@
 
   <root level="${root-level}">
     <!-- don't push below line to production -->
-    <appender-ref ref="ASYNCSTDOUT" />
+    <!--<appender-ref ref="ASYNCSTDOUT" />-->
     <appender-ref ref="ROLLING_FILE" />
   </root>
 
